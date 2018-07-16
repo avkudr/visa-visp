@@ -253,10 +253,10 @@ vpMatrix vpVisaAdapter::get_fJe()
 
     vpMatrix J;
     int nbDOFs = values.size() / 6;
-    J = vpMatrix(6,values.size() / 6);
+    J = vpMatrix(6, nbDOFs);
     for (int i = 0; i < 6; i++){
         for (int j = 0; j < nbDOFs; j++){
-            J[i][j] = values[6*i + j];
+            J[i][j] = values[nbDOFs*i + j];
         }        
     }
     return J;

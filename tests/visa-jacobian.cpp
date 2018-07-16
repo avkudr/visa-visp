@@ -25,19 +25,24 @@ int main ()
         auto eJe = adapter.get_eJe(); //analytical jacobian
         auto fMe = adapter.get_fMe();
 
+        // std::cout << "fMe: \n" << fMe << std::endl;
+        // return 0;
+
         vpColVector v(6);
-        v[0] =    0; //vx
-        v[1] =    0; //vy
-        v[2] = 0.01; //vz
-        v[3] =    0; //wx
-        v[4] =    0; //wy
-        v[5] =    0; //wz
+        v[0] =     0; //vx
+        v[1] =     0; //vy
+        v[2] = -0.02; //vz
+        v[3] =     0; //wx
+        v[4] =     0; //wy
+        v[5] =     0; //wz
         
         vpColVector qdot;
 
-        qdot = fJe.pseudoInverse() * v; // vf -- good!
-        //qdot = eJe.pseudoInverse() * v; // ve -- not good!
+        //qdot = fJe.pseudoInverse() * v; // vf -- good!
+        qdot = eJe.pseudoInverse() * v; // ve -- not good!
         
+        std::cout << "fJe: \n" <<  fJe << std::endl;
+
         std::vector<double> qdotVec(qdot.size());
         for (int i = 0; i < qdot.size(); i++){
             qdotVec[i] = qdot[i];
