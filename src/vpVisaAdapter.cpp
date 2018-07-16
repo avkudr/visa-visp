@@ -1,0 +1,279 @@
+#include "vpVisaAdapter.h"
+
+// =============================================================================
+// STRING MANIPULATIONS
+// =============================================================================
+
+std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r_ ")
+{
+    str.erase(str.find_last_not_of(chars) + 1);
+    return str;
+}
+
+template<typename Out>
+void split(const std::string &s, char delim, Out result) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        *(result++) = item;
+    }
+}
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, std::back_inserter(elems));
+    return elems;
+}
+
+// =============================================================================
+// FUNCTIONS
+// =============================================================================
+
+vpVisaAdapter::vpVisaAdapter()
+    : connected(false)
+{
+
+}
+
+vpVisaAdapter::~vpVisaAdapter()
+{
+    this->disconnect();
+}
+
+
+bool vpVisaAdapter::connect(const char* host, const unsigned int port)
+{
+    #ifdef _WIN32
+        WSAStartup(MAKEWORD(2,0), &WSAData);
+    #endif
+
+    server_socket.sin_addr.s_addr = inet_addr(host);
+    server_socket.sin_family	  = AF_INET;
+    server_socket.sin_port		  = htons(port);
+
+    //sock = socket(AF_INET, SOCK_DGRAM , IPPROTO_UDP);
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    #ifdef _WIN32
+        connected = connected = (::connect(sock, (SOCKADDR*)&sin, sizeof(sin)) != SOCKET_ERROR);
+    #elif __linux__ || __APPLE__
+        auto res = (::connect(sock, (struct sockaddr*)&server_socket, sizeof(server_socket))<0);
+        connected = (res == 0);
+        usleep(50*1000);
+    #endif
+
+
+    return connected;
+}
+
+void vpVisaAdapter::disconnect()
+{
+    if (this->connected){
+        //dtor
+        #ifdef _WIN32
+            closesocket(sock); // Fermeture du socket
+            WSACleanup();
+        #elif __linux__ || __APPLE__
+            close(sock); // Fermeture du socket
+        #endif
+
+        connected = false;
+    }
+}
+
+const bool vpVisaAdapter::sendCmd(std::string cmd, std::vector<double> args)
+{
+    std::string msg = cmd;
+    for (auto i = 0; i < args.size(); i++){
+        msg.append(",");
+        msg.append( std::to_string(args[i]) );
+    }
+    std::cout << msg << std::endl;
+
+    char buffer[1024];
+    strncpy(buffer, msg.c_str(), msg.size());
+    ::send(sock,buffer,msg.size(),0);
+
+    char bufferResponse[500];
+    ::recv(sock, bufferResponse, 500, 0);
+    std::string str(bufferResponse);
+    //std::cout << "response from visa" << str << std::endl;
+    rtrim(str);
+    if (str.compare(0,2,"OK") == 0){
+        return true;
+    }
+    else{
+        std::cerr << "ERROR: " << bufferResponse << std::endl;
+        return false;
+    }
+}
+
+const bool vpVisaAdapter::setJointPosAbs(std::vector<double> joints)
+{
+    return sendCmd("SETJOINTPOSABS",joints);
+}
+
+const bool vpVisaAdapter::setJointPosRel(std::vector<double> joints)
+{
+    return sendCmd("SETJOINTPOSREL",joints);
+}
+
+const bool vpVisaAdapter::setJointVel(std::vector<double> velocities)
+{
+    return sendCmd("SETJOINTVEL",velocities);
+}
+
+const bool vpVisaAdapter::homing()
+{
+    return sendCmd("HOMING",{});
+}
+
+void vpVisaAdapter::getCalibMatrix(std::vector<double> & matrix)
+{
+    matrix.clear();
+    char buffer[12] = "GETCALIBMAT";
+    char bufferResponse[500]; //too large but sure to fit
+    ::send(sock, buffer,sizeof(buffer)-1,0);
+    ::recv(sock, bufferResponse, 500, 0);
+    std::string str(bufferResponse);
+    rtrim(str);
+    std::vector<std::string> valuesStr = split(str, ',');
+
+    matrix.clear();
+    matrix.resize(valuesStr.size());
+    for (auto i = 0; i < matrix.size(); i++){
+        matrix[i] = std::stof(valuesStr[i]);
+    }
+}
+
+void vpVisaAdapter::getJointPos(std::vector<double> & values)
+{
+    char buffer[12] = "GETJOINTPOS";
+    char bufferResponse[500]; //too large but sure to fit
+    ::send(sock, buffer,sizeof(buffer)-1,0);
+    ::recv(sock, bufferResponse, 500, 0);
+    std::string str(bufferResponse);
+    rtrim(str);
+    std::vector<std::string> valuesStr = split(str, ',');
+
+    values.clear();
+    values.resize(valuesStr.size());
+    for (auto i = 0; i < values.size(); i++){
+        values[i] = std::stof(valuesStr[i]);
+    }
+}
+
+void vpVisaAdapter::getToolTransform(std::vector<double> & matrix)
+{
+    char buffer[11] = "GETTOOLPOS";
+    char bufferResponse[500]; //too large but sure to fit
+    ::send(sock, buffer,sizeof(buffer)-1,0);
+    ::recv(sock, bufferResponse, 500, 0);
+    std::string str(bufferResponse);
+    rtrim(str);
+    std::vector<std::string> valuesStr = split(str, ',');
+
+    matrix.clear();
+    matrix.resize(valuesStr.size());
+    for (auto i = 0; i < matrix.size(); i++){
+        matrix[i] = std::stof(valuesStr[i]);
+    }
+}
+
+std::string vpVisaAdapter::getImage()
+{
+    char buffer[9] = "GETIMAGE";
+    char bufferResponse[500]; //UDP max package size
+    std::string msgPrefix = "PACKAGE_LENGTH:";
+
+    ::send(sock, buffer, 8, 0);
+    ::recv(sock, bufferResponse, 500, 0);
+
+	std::string message(bufferResponse);
+	message = message.substr(msgPrefix.size(),10);
+	message.erase(std::remove_if(message.begin(), message.end(),
+                        [](char c) { return !std::isdigit(c); }),
+         message.end());
+	int imageSize = std::stoi(message); //parse int
+	//std::cout << "imageSize: " << imageSize << std::endl;
+
+
+    char * bufferImage = new char[imageSize+2]; //allocate memory
+	//acquire the image
+	::recv(sock, bufferImage, imageSize+1, MSG_WAITALL);
+    //delete prefix and decode
+	std::string encodedImage(bufferImage);
+
+    delete[] bufferImage;
+
+	encodedImage = encodedImage.substr(0,imageSize);
+    encodedImage.erase(0,22);
+    auto res = base64_decode(encodedImage);
+	
+    return res;
+}
+
+#ifdef WITH_OPENCV
+cv::Mat vpVisaAdapter::getImageOpenCV()
+{
+    std::string decodedImage = this->getImage();
+
+    std::vector<uchar> vectordata(decodedImage.begin(),decodedImage.end());
+    cv::Mat data_mat(vectordata,true);
+
+    cv::Mat image(cv::imdecode(data_mat,1)); //put 0 if you want greyscale
+    return image;
+}
+#endif
+
+#if defined(WITH_OPENCV) && defined(WITH_VISP)
+vpImage<unsigned char> vpVisaAdapter::getImageViSP()
+{
+    vpImage<unsigned char> I;
+    vpImageConvert::convert(this->getImageOpenCV(), I);
+    return I;
+}
+
+vpMatrix vpVisaAdapter::get_fJe()
+{
+    char buffer[12] = "GETJACOBIAN";
+    char bufferResponse[500]; //too large but sure to fit
+    ::send(sock, buffer,sizeof(buffer)-1,0);
+    ::recv(sock, bufferResponse, 500, 0);
+    std::string str(bufferResponse);
+    rtrim(str);
+    std::vector<std::string> valuesStr = split(str, ',');
+
+    std::vector<double> values;
+    values.clear();
+    values.resize(valuesStr.size());
+    for (auto i = 0; i < values.size(); i++){
+        values[i] = std::stof(valuesStr[i]);
+    }
+
+    vpMatrix J;
+    int nbDOFs = values.size() / 6;
+    J = vpMatrix(6,values.size() / 6);
+    for (int i = 0; i < 6; i++){
+        for (int j = 0; j < nbDOFs; j++){
+            J[i][j] = values[6*i + j];
+        }        
+    }
+    return J;
+}
+
+vpHomogeneousMatrix vpVisaAdapter::get_fMe(){
+    std::vector<double> fMe_vector;
+    this->getToolTransform(fMe_vector);
+
+    vpHomogeneousMatrix fMe;
+    for (int i = 0; i < 4; i++){
+        for (int j = 0; j < 4; j++){
+            std::cout << fMe_vector[4*j+i] << " ("<< i << ":" << j << ")" << std::endl;
+            fMe[i][j] = fMe_vector[4*j+i];
+        }   
+    }
+    return fMe;
+}
+
+#endif
