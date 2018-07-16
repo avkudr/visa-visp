@@ -41,6 +41,7 @@ int main()
   adapter->connect();
 
   vpMatrix eJe;
+  vpMatrix fJe;
   vpHomogeneousMatrix fMe;
 
   vpHomogeneousMatrix eMc(vpTranslationVector(0, 0, 0), vpRotationMatrix(vpRxyzVector(0, 0, -M_PI/2.)));
@@ -70,9 +71,46 @@ int main()
 
     std::cout << "q: " << q.t() << std::endl;
     robot.get_eJe(q, eJe);
+    robot.get_fJe(q, fJe);
     robot.get_fMe(q, fMe);
-    std::cout << "fMe: \n" << fMe << std::endl;
-    std::cout << "fMc: \n" << fMe * eMc << std::endl;
+    vpVelocityTwistMatrix tmp(fMe.inverse());
+    vpVelocityTwistMatrix fVe;
+    fVe[0][0] = tmp[0][0];
+    fVe[0][1] = tmp[0][1];
+    fVe[0][2] = tmp[0][2];
+    fVe[1][0] = tmp[1][0];
+    fVe[1][1] = tmp[1][1];
+    fVe[1][2] = tmp[1][2];
+    fVe[2][0] = tmp[2][0];
+    fVe[2][1] = tmp[2][1];
+    fVe[2][2] = tmp[2][2];
+
+    fVe[3][3] = tmp[3][3];
+    fVe[3][4] = tmp[3][4];
+    fVe[3][5] = tmp[3][5];
+    fVe[4][3] = tmp[4][3];
+    fVe[4][4] = tmp[4][4];
+    fVe[4][5] = tmp[4][5];
+    fVe[5][3] = tmp[5][3];
+    fVe[5][4] = tmp[5][4];
+    fVe[5][5] = tmp[5][5];
+
+    std::cout << "fVe: \n" << eJe << std::endl;
+    std::cout << "Difference: \n" << (fVe * fJe - eJe) << std::endl;
+
+    // std::cout << "eJe VISP: \n" << eJe << std::endl;
+    // auto fMe = adapter->get_fMe();
+    // auto fJe_visa = adapter->get_fJe();
+    // vpVelocityTwistMatrix fVe(fMe);
+    // auto tmp = fVe.inverse() * fJe_visa;
+    // std::cout << "eJe SIMA: \n" << fJe_visa << std::endl;
+     
+    
+    // robot.get_fMe(q, fMe);
+    // std::cout << "fMe VISP: \n" << fMe << std::endl;
+    // std::cout << "fMe SIMA: \n" << adapter->get_fMe() << std::endl;
+
+    return EXIT_SUCCESS;
 
 
 

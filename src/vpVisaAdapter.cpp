@@ -269,11 +269,38 @@ vpHomogeneousMatrix vpVisaAdapter::get_fMe(){
     vpHomogeneousMatrix fMe;
     for (int i = 0; i < 4; i++){
         for (int j = 0; j < 4; j++){
-            std::cout << fMe_vector[4*j+i] << " ("<< i << ":" << j << ")" << std::endl;
             fMe[i][j] = fMe_vector[4*j+i];
         }   
     }
     return fMe;
 }
 
+vpMatrix vpVisaAdapter::get_eJe()
+{
+    auto fMe = this->get_fMe();
+    auto fJe = this->get_fJe();
+    vpVelocityTwistMatrix tmp(fMe.inverse());
+    vpVelocityTwistMatrix fVe;
+    fVe[0][0] = tmp[0][0];
+    fVe[0][1] = tmp[0][1];
+    fVe[0][2] = tmp[0][2];
+    fVe[1][0] = tmp[1][0];
+    fVe[1][1] = tmp[1][1];
+    fVe[1][2] = tmp[1][2];
+    fVe[2][0] = tmp[2][0];
+    fVe[2][1] = tmp[2][1];
+    fVe[2][2] = tmp[2][2];
+
+    fVe[3][3] = tmp[3][3];
+    fVe[3][4] = tmp[3][4];
+    fVe[3][5] = tmp[3][5];
+    fVe[4][3] = tmp[4][3];
+    fVe[4][4] = tmp[4][4];
+    fVe[4][5] = tmp[4][5];
+    fVe[5][3] = tmp[5][3];
+    fVe[5][4] = tmp[5][4];
+    fVe[5][5] = tmp[5][5];
+
+    return fVe * fJe;
+}
 #endif

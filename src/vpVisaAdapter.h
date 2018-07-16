@@ -67,6 +67,7 @@ class vpVisaAdapter
 
         #if defined(WITH_OPENCV) && defined(WITH_VISP)
             vpImage<unsigned char> getImageViSP();
+            vpMatrix get_eJe();
             vpMatrix get_fJe();
             vpHomogeneousMatrix get_fMe();
         #endif

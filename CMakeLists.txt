@@ -40,8 +40,8 @@ endif()
 # add_executable(visa-ibvs ${SOURCES} tests/visa-ibvs.cpp)
 # target_link_libraries(visa-ibvs ${OpenCV_LIBS} ${VISP_LIBRARIES})
 
-# add_executable(visa-controller ${SOURCES} tests/visa-controller.cpp)
-# target_link_libraries(visa-controller ${OpenCV_LIBS} ${VISP_LIBRARIES})
+add_executable(visa-controller ${SOURCES} tests/visa-controller.cpp)
+target_link_libraries(visa-controller ${OpenCV_LIBS} ${VISP_LIBRARIES})
 
 add_executable(visa-jacobian ${SOURCES} tests/visa-jacobian.cpp)
 target_link_libraries(visa-jacobian ${OpenCV_LIBS} ${VISP_LIBRARIES})

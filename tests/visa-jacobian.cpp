@@ -21,22 +21,29 @@ int main ()
     while(1){
         double t = vpTime::measureTimeMs();
 
-        auto fJe = adapter.get_fJe();
+        auto fJe = adapter.get_fJe(); //geometric jacobian
+        auto eJe = adapter.get_eJe(); //analytical jacobian
         auto fMe = adapter.get_fMe();
-        vpVelocityTwistMatrix fVe(fMe);
 
         vpColVector v(6);
-        v[2] = 0.02;
-        vpColVector qdot(7);
+        v[0] =    0; //vx
+        v[1] =    0; //vy
+        v[2] = 0.01; //vz
+        v[3] =    0; //wx
+        v[4] =    0; //wy
+        v[5] =    0; //wz
+        
+        vpColVector qdot;
 
-        qdot = fJe.pseudoInverse() * fVe * v;
-
-        std::vector<double> qdot_(qdot.size());
+        qdot = fJe.pseudoInverse() * v; // vf -- good!
+        //qdot = eJe.pseudoInverse() * v; // ve -- not good!
+        
+        std::vector<double> qdotVec(qdot.size());
         for (int i = 0; i < qdot.size(); i++){
-            qdot_[i] = qdot[i];
+            qdotVec[i] = qdot[i];
         }
 
-        adapter.setJointVel(qdot_);
+        adapter.setJointVel(qdotVec);
 
         vpTime::wait(t, 40);
     }    
