@@ -153,8 +153,6 @@ void compute_pose(vpPoint point[], vpDot2 dot[], int ndot, vpCameraParameters ca
 int main()
 {
   try {
-    vpViper650 robot;
-
     vpHomogeneousMatrix eMc(vpTranslationVector(0, 0, 0), vpRotationMatrix(vpRxyzVector(0, 0, -M_PI/2.)));
     vpVelocityTwistMatrix cVe(eMc.inverse());
 
@@ -320,7 +318,7 @@ int main()
       std::vector<double> qvec;
       adapter->getJointPos(qvec);
       vpColVector q(qvec);
-      robot.get_eJe(q, eJe);
+      eJe = adapter->get_eJe();
       // Update this jacobian in the task structure. It will be used to
       // compute the velocity skew (as an articular velocity) qdot = -lambda *
       // L^+ * cVe * eJe * (s-s*)
@@ -364,7 +362,7 @@ int main()
       vpTime::wait(t, 40); // Loop time is set to 40 ms, ie 25 Hz
     }
 
-    adapter->setJointVel({0,0,0,0,0,0}); // stop robot
+    adapter->setJointVel({0,0,0,0,0,0,0}); // stop robot
 
     std::cout << "Display task information: " << std::endl;
     task.print();

@@ -34,11 +34,11 @@ else()
     message("ViSP not found")
 endif()
 
-# add_executable(image-grab-desired-position ${SOURCES} tests/image-grab-desired-position.cpp)
-# target_link_libraries(image-grab-desired-position ${OpenCV_LIBS} ${VISP_LIBRARIES})
+add_executable(image-grab-desired-position ${SOURCES} tests/image-grab-desired-position.cpp)
+target_link_libraries(image-grab-desired-position ${OpenCV_LIBS} ${VISP_LIBRARIES})
 
-# add_executable(visa-ibvs ${SOURCES} tests/visa-ibvs.cpp)
-# target_link_libraries(visa-ibvs ${OpenCV_LIBS} ${VISP_LIBRARIES})
+add_executable(visa-ibvs ${SOURCES} tests/visa-ibvs.cpp)
+target_link_libraries(visa-ibvs ${OpenCV_LIBS} ${VISP_LIBRARIES})
 
 add_executable(visa-controller ${SOURCES} tests/visa-controller.cpp)
 target_link_libraries(visa-controller ${OpenCV_LIBS} ${VISP_LIBRARIES})
