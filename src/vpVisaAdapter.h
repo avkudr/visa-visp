@@ -40,6 +40,9 @@
 
 #endif
 
+#include <iostream>
+#include <chrono>
+
 class vpVisaAdapter
 {
     public:
@@ -59,14 +62,16 @@ class vpVisaAdapter
         void getToolTransform(std::vector<double> & );
         void getCalibMatrix(std::vector<double> & );
         
-        std::string getImage();
+        std::vector<unsigned char> getImage();
 
         #ifdef WITH_OPENCV
             cv::Mat getImageOpenCV();
+            cv::Mat getImageBWOpenCV();
         #endif
 
         #if defined(WITH_OPENCV) && defined(WITH_VISP)
             vpImage<unsigned char> getImageViSP();
+            vpImage<unsigned char> getImageBWViSP();
             vpMatrix get_eJe();
             vpMatrix get_fJe();
             vpHomogeneousMatrix get_fMe();
@@ -84,6 +89,8 @@ class vpVisaAdapter
 
         const bool sendCmd(std::string, std::vector<double>);
 
+        unsigned char * bufferImage;
+        unsigned char * bufferMsg;
         bool connected;
         bool isVelCtrlActive; // not used yet
 };

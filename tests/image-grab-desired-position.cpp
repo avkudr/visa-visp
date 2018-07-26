@@ -40,12 +40,17 @@ int main ()
     vpMouseButton::vpMouseButtonType button0;
     vpImagePoint ip0_tmp;
 
+    auto startTime_ = std::chrono::system_clock::now();
+    double ms = 0;
+    int frames = 0;
     double t;
     while(1)
     {
-        t = vpTime::measureTimeMs();
+        //t = vpTime::measureTimeMs();
+        startTime_ = std::chrono::system_clock::now();      
 
         I = adapter->getImageViSP();
+
         vpDisplay::display(I);
         vpDisplay::displayCharString(I, 10, 10, "Mouse right click on the image to select feature points ...",vpColor::orange);
         vpDisplay::getClick(I,ip0_tmp, button0, false);
@@ -55,7 +60,17 @@ int main ()
         }
         vpDisplay::flush(I);
 
-        vpTime::wait(t, 40); // Loop time is set to 40 ms, ie 25 Hz
+        //vpTime::wait(t, 40); // Loop time is set to 40 ms, ie 25 Hz
+
+        auto endTime = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime_).count();
+        ms += duration;
+        frames++;
+        if (ms > 1000000){
+            std::cout << "FPS: " << frames << std::endl; 
+            ms = 0;
+            frames = 0;
+        }
     }
     button0 = vpMouseButton::vpMouseButtonType::button1;
 

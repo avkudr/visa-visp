@@ -51,8 +51,8 @@ bool vpVisaAdapter::connect(const char* host, const unsigned int port)
     server_socket.sin_family	  = AF_INET;
     server_socket.sin_port		  = htons(port);
 
-    //sock = socket(AF_INET, SOCK_DGRAM , IPPROTO_UDP);
-	sock = socket(AF_INET, SOCK_STREAM, 0);
+    sock = socket(AF_INET, SOCK_DGRAM , IPPROTO_UDP);
+	//sock = socket(AF_INET, SOCK_STREAM, 0);
 
     #ifdef _WIN32
         connected = connected = (::connect(sock, (SOCKADDR*)&sin, sizeof(sin)) != SOCKET_ERROR);
@@ -62,6 +62,11 @@ bool vpVisaAdapter::connect(const char* host, const unsigned int port)
         usleep(50*1000);
     #endif
 
+    std::vector<double> K;
+    this->getCalibMatrix(K);
+    int width = K[6]*2;
+    int height = K[7]*2;
+    this->bufferImage = new unsigned char[width*height+2];
 
     return connected;
 }
@@ -180,8 +185,10 @@ void vpVisaAdapter::getToolTransform(std::vector<double> & matrix)
     }
 }
 
-std::string vpVisaAdapter::getImage()
+std::vector<unsigned char> vpVisaAdapter::getImage()
 {
+
+
     char buffer[9] = "GETIMAGE";
     char bufferResponse[500]; //UDP max package size
     std::string msgPrefix = "PACKAGE_LENGTH:";
@@ -199,29 +206,55 @@ std::string vpVisaAdapter::getImage()
 
 
     char * bufferImage = new char[imageSize+2]; //allocate memory
+
 	//acquire the image
+//auto start = std::chrono::steady_clock::now();
 	::recv(sock, bufferImage, imageSize+1, MSG_WAITALL);
     //delete prefix and decode
-	std::string encodedImage(bufferImage);
+//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+//std::cout << "Time,ms:" << duration.count() << std::endl;
 
+    
+    std::string encodedImage(bufferImage);
+
+    int start = 23; //jpeg
+    auto res  = base64_decode_array(&bufferImage[start],imageSize - start);
     delete[] bufferImage;
 
-	encodedImage = encodedImage.substr(0,imageSize);
-    encodedImage.erase(0,22);
-    auto res = base64_decode(encodedImage);
-	
     return res;
 }
 
 #ifdef WITH_OPENCV
 cv::Mat vpVisaAdapter::getImageOpenCV()
 {
-    std::string decodedImage = this->getImage();
-
-    std::vector<uchar> vectordata(decodedImage.begin(),decodedImage.end());
+    std::vector<unsigned char> vectordata = this->getImage();
     cv::Mat data_mat(vectordata,true);
 
     cv::Mat image(cv::imdecode(data_mat,1)); //put 0 if you want greyscale
+    return image;
+}
+
+cv::Mat vpVisaAdapter::getImageBWOpenCV()
+{
+    char buffer[11] = "GETIMAGEBW";
+    char bufferResponse[500]; //UDP max package size
+    std::string msgPrefix = "PACKAGE_LENGTH:";
+
+    ::send(sock, buffer, 10, 0);
+    ::recv(sock, bufferResponse, 500, 0);
+
+	std::string message(bufferResponse);
+	message = message.substr(msgPrefix.size(),10);
+	message.erase(std::remove_if(message.begin(), message.end(),
+                        [](char c) { return !std::isdigit(c); }),
+                    message.end());
+	int imageSize = std::stoi(message); //parse int
+
+    //unsigned char * bufferImage = new unsigned char[imageSize+2]; //allocate memory
+	//acquire the image
+	::recv(sock, bufferImage, imageSize+1, MSG_WAITALL);
+
+    cv::Mat image(480, 640, CV_8UC1, bufferImage);
     return image;
 }
 #endif
@@ -231,6 +264,13 @@ vpImage<unsigned char> vpVisaAdapter::getImageViSP()
 {
     vpImage<unsigned char> I;
     vpImageConvert::convert(this->getImageOpenCV(), I);
+    return I;
+}
+
+vpImage<unsigned char> vpVisaAdapter::getImageBWViSP()
+{
+    vpImage<unsigned char> I;
+    vpImageConvert::convert(this->getImageBWOpenCV(), I);
     return I;
 }
 
