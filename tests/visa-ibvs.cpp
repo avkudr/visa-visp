@@ -157,7 +157,7 @@ int main()
     vpVelocityTwistMatrix cVe(eMc.inverse());
 
     vpServo task;
-
+  
     // init communication with simulator
     vpVisaAdapter * adapter = new vpVisaAdapter();
     adapter->connect();
@@ -254,7 +254,7 @@ int main()
       task.addFeature(p[i], pd[i]);
 
     // Set the proportional gain
-    task.setLambda(0.3);
+    task.setLambda(0.1);
 
     // Display task information
     task.print();
@@ -319,6 +319,7 @@ int main()
       adapter->getJointPos(qvec);
       vpColVector q(qvec);
       eJe = adapter->get_eJe();
+
       // Update this jacobian in the task structure. It will be used to
       // compute the velocity skew (as an articular velocity) qdot = -lambda *
       // L^+ * cVe * eJe * (s-s*)

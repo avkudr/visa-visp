@@ -49,7 +49,7 @@ class vpVisaAdapter
 
         vpVisaAdapter();
         ~vpVisaAdapter();
-        bool connect(const char* = "127.0.0.1", const unsigned int = 1234);
+        bool connect(const char* = "127.0.0.1", const unsigned int = 2408);
         void disconnect();
         const bool isConnected(){ return connected; }
 
