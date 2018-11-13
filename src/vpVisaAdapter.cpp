@@ -217,7 +217,13 @@ std::vector<unsigned char> vpVisaAdapter::getImage()
     
     std::string encodedImage(bufferImage);
 
+    std::string type = encodedImage.substr(0,23);
     int start = 23; //jpeg
+    if (type.find("png") != std::string::npos) {
+        start = 22; //png
+    }
+    std::cout << type << " : " << start << std::endl;
+    
     auto res  = base64_decode_array(&bufferImage[start],imageSize - start);
     delete[] bufferImage;
 
